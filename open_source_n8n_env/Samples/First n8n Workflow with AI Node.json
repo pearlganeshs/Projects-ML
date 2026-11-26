@@ -1,0 +1,167 @@
+{
+  "name": "Local Mac Ollama Test Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "c238edd7-1f38-4618-90fe-0b957eb5701a",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -448,
+        32
+      ],
+      "webhookId": "local-mac-test-chat"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Splits your chat prompt into 2 test items to demonstrate Loop Over Items\nconst userPrompt = $input.first().json.chatInput || 'Explain n8n in one sentence.';\n\nreturn [\n  { json: { task: 'Short Summary', prompt: `Give a 1-sentence summary of: ${userPrompt}` } },\n  { json: { task: 'LinkedIn Hook', prompt: `Write a catchy 1-line LinkedIn hook about: ${userPrompt}` } }\n];"
+      },
+      "id": "890940d3-81b7-4a72-b80d-e026f1069e67",
+      "name": "Prepare 2 Test Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "d570e320-a53c-48a3-a018-3424a1a67c56",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        0,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"qwen2.5-coder:14b\",\n  \"prompt\": {{ JSON.stringify($json.prompt) }},\n  \"stream\": false\n}",
+        "options": {}
+      },
+      "id": "28f49fae-7506-43a8-8e9d-d8d8087a3677",
+      "name": "Ask Local Ollama (Qwen)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "id": "1e335033-b725-4c87-9039-efcd65dc8eeb",
+      "name": "Wait 1s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        112
+      ],
+      "webhookId": "local-wait-1s"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combines all loop results into a single clean chat reply\nconst results = $input.all().map((item, idx) => {\n  return `**Result ${idx + 1}:**\\n${item.json.response}`;\n});\n\nreturn [{ json: { output: results.join('\\n\\n---\\n\\n') } }];"
+      },
+      "id": "f4c30968-7569-4833-92c8-8ab8712f87f3",
+      "name": "Format Chat Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -96
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Prepare 2 Test Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare 2 Test Prompts": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Format Chat Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask Local Ollama (Qwen)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Local Ollama (Qwen)": {
+      "main": [
+        [
+          {
+            "node": "Wait 1s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1s": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "16526269-2074-459a-8634-60fe31f0c0cf",
+  "meta": {
+    "instanceId": "a31249396952ba9e785ff7bd8e66a2a803f96f09906993558144a27abbb11840"
+  },
+  "nodeGroups": [],
+  "id": "rTezB0cg6Ea2Wr58",
+  "tags": []
+}

@@ -1,0 +1,86 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "/Users/muthsubr/miniconda3/bin/python",
+      "args": [
+        "-u",
+        "/Users/muthsubr/d/Learnings/DS_ML/Projects/Projects-ML/mcp_scripts/mcp_project_filesystem.py"
+      ],
+      "env": {
+        "PROJECT_FILESYSTEM_ROOT": "/Users/muthsubr/d/Learnings/DS_ML/Projects/Projects-ML"
+      },
+      "tools": ["*"]
+    },
+    "oracle": {
+      "type": "stdio",
+      "command": "/Users/muthsubr/miniconda3/bin/python",
+      "args": [
+        "-u",
+        "/Users/muthsubr/d/Learnings/DS_ML/Projects/Projects-ML/mcp_scripts/mcp_oracle_server.py"
+      ],
+      "env": {
+        "ORACLE_USER": "FUSION",
+        "ORACLE_PASSWORD": "Welcome1",
+        "ORACLE_HOST": "localhost",
+        "ORACLE_PORT": "1521",
+        "ORACLE_SERVICE": "FREEPDB1",
+        "ORACLE_WRITE_ENABLED": "false"
+      },
+      "tools": ["*"]
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "/Users/muthsubr/miniconda3/bin/python",
+      "args": [
+        "-u",
+        "/Users/muthsubr/d/Learnings/DS_ML/Projects/Projects-ML/mcp_scripts/mcp_playwright_server.py"
+      ],
+      "env": {
+        "PLAYWRIGHT_HEADLESS": "true",
+        "PLAYWRIGHT_SCREENSHOT_DIR": "/Users/muthsubr/d/Learnings/DS_ML/Projects/Projects-ML/screenshots"
+      },
+      "tools": ["*"]
+    },
+    "git": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--mount",
+        "type=bind,src=/Users/muthsubr/d/Learnings/DS_ML/Projects/Projects-ML,dst=/workspace",
+        "mcp/git:latest",
+        "--repository",
+        "/workspace"
+      ],
+      "tools": ["*"]
+    },
+    "figma": {
+      "type": "stdio",
+      "command": "/Users/muthsubr/miniconda3/bin/python",
+      "args": [
+        "-u",
+        "/Users/muthsubr/d/Learnings/DS_ML/Projects/Projects-ML/mcp_scripts/mcp_figma_server.py"
+      ],
+      "env": {
+        "FIGMA_ACCESS_TOKEN": "YOUR_FIGMA_TOKEN"
+      },
+      "tools": ["*"]
+    },
+    "graphify": {
+      "type": "stdio",
+      "command": "/Users/muthsubr/miniconda3/bin/python",
+      "args": [
+        "-u",
+        "/Users/muthsubr/d/Learnings/DS_ML/Projects/Projects-ML/mcp_scripts/mcp_graphify_server.py"
+      ],
+      "env": {
+        "GRAPHIFY_PROJECT_ROOT": "/Users/muthsubr/d/Learnings/DS_ML/Projects/Projects-ML",
+        "GRAPHIFY_OUT_DIR": "graphify-out"
+      },
+      "tools": ["*"]
+    }
+  }
+}

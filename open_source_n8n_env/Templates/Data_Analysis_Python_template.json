@@ -1,0 +1,333 @@
+{
+  "name": "Sample Data Analysis - Oracle + Excel + Python - 3 Outputs",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fileSelector": "/files/input.xlsx",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Read Excel File",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Extract Excel Rows",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        470,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT CUSTOMER_ID, CUSTOMER_NAME, REGION, PRODUCT, QUANTITY, UNIT_PRICE, ORDER_DATE FROM YOUR_SCHEMA.YOUR_TABLE FETCH FIRST 1000 ROWS ONLY",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "Oracle - Read Sales",
+      "type": "n8n-nodes-base.oracle",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "credentials": {
+        "oracleDatabase": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Oracle account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "cat /files/python_input.json | python3 /files/n8n_python_enrichment_template.py",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Python - Enrich Sample Input",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        240,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw=$json.stdout ?? ''; let parsed; try { parsed=JSON.parse(raw); } catch(e) { throw new Error('Python script must print a JSON array to stdout: '+String(raw).slice(0,250)); } if(!Array.isArray(parsed)) throw new Error('Expected JSON array from Python.'); return parsed.map(x=>({json:x}));"
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "Parse Python Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        470,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "Combine Oracle + Excel + Python",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        730,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Example harmonization: normalize field names and calculate revenue. Adapt mappings to your Oracle/Excel schema.\\nconst input=$input.all().map(x=>x.json); const seen=new Set(); const out=[]; for(const r of input){const x={...r}; const q=Number(x.quantity), p=Number(x.unit_price); if(Number.isFinite(q)&&Number.isFinite(p)&&x.revenue==null)x.revenue=q*p; const sig=JSON.stringify(x); if(!seen.has(sig)){seen.add(sig);out.push(x);}} const total=out.reduce((s,r)=>s+(Number(r.revenue)||0),0); const regions={}; for(const r of out){const k=r.region||'Unknown'; regions[k]=(regions[k]||0)+(Number(r.revenue)||0);} return out.map(r=>({json:{...r,_analysis:{recordCount:out.length,totalRevenue:total,revenueByRegion:regions}}}));"
+      },
+      "id": "a1000000-0000-4000-8000-000000000008",
+      "name": "Clean + Analyze Dataset",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        970,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Main output: each item appears as a table in n8n execution data.\\nreturn $input.all();"
+      },
+      "id": "a1000000-0000-4000-8000-000000000009",
+      "name": "Table Output (n8n Execution)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1210,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toXlsx",
+        "options": {
+          "fileName": "analysis_output.xlsx"
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000010",
+      "name": "Convert Results to Excel",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1210,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/files/output/analysis_output.xlsx",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000011",
+      "name": "Save Excel Output",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        1450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Builds a small standalone HTML dashboard from the analyzed items.\\nconst rows=$input.all().map(x=>x.json); const total=rows.reduce((s,r)=>s+(Number(r.revenue)||0),0); const by={}; for(const r of rows){const k=r.region||'Unknown';by[k]=(by[k]||0)+(Number(r.revenue)||0);} const max=Math.max(1,...Object.values(by)); const bars=Object.entries(by).map(([k,v])=>`<p>${k} \u2014 ${v.toLocaleString()}<div style=\\\"background:#e8eef7;height:12px;border-radius:8px\\\"><div style=\\\"width:${v/max*100}%;background:#2563eb;height:12px;border-radius:8px\\\"></div></div></p>`).join(''); const esc=s=>String(s??'').replace(/[&<>\\\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\\\"':'&quot;'}[c])); const table=rows.slice(0,100).map(r=>`<tr><td>${esc(r.customer_name||r.customer_id||'')}</td><td>${esc(r.region)}</td><td>${esc(r.product)}</td><td>${esc(r.quantity)}</td><td>${(Number(r.revenue)||0).toLocaleString()}</td></tr>`).join(''); const html=`<!doctype html><html><meta charset=\\\"utf-8\\\"><title>n8n Analysis Dashboard</title><style>body{font:15px Arial;background:#f4f7fb;color:#172033;margin:30px}main{max-width:1000px;margin:auto}.card{background:white;padding:20px;border:1px solid #e2e8f0;border-radius:12px;margin:14px 0}.kpi{font-size:28px;font-weight:bold}table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #e5eaf1;text-align:left}</style><main><h1>Data Analysis Dashboard</h1><div class=\\\"card\\\">Total records <b>${rows.length}</b><p>Total revenue</p><div class=\\\"kpi\\\">${total.toLocaleString()}</div></div><div class=\\\"card\\\"><h2>Revenue by Region</h2>${bars}</div><div class=\\\"card\\\"><h2>Data Preview</h2><table><tr><th>Customer</th><th>Region</th><th>Product</th><th>Quantity</th><th>Revenue</th></tr>${table}</table></div></main></html>`; const binary=await this.helpers.prepareBinaryData(Buffer.from(html,'utf8'),'analysis_dashboard.html','text/html'); return [{json:{fileName:'analysis_dashboard.html',recordCount:rows.length},binary:{data:binary}}];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000012",
+      "name": "Build HTML Dashboard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1210,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/files/output/analysis_dashboard.html",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000013",
+      "name": "Save HTML Dashboard",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        1450,
+        520
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Excel File",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Oracle - Read Sales",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Python - Enrich Sample Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Excel File": {
+      "main": [
+        [
+          {
+            "node": "Extract Excel Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Excel Rows": {
+      "main": [
+        [
+          {
+            "node": "Combine Oracle + Excel + Python",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Oracle - Read Sales": {
+      "main": [
+        [
+          {
+            "node": "Combine Oracle + Excel + Python",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Python - Enrich Sample Input": {
+      "main": [
+        [
+          {
+            "node": "Parse Python Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Python Output": {
+      "main": [
+        [
+          {
+            "node": "Combine Oracle + Excel + Python",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Combine Oracle + Excel + Python": {
+      "main": [
+        [
+          {
+            "node": "Clean + Analyze Dataset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean + Analyze Dataset": {
+      "main": [
+        [
+          {
+            "node": "Table Output (n8n Execution)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Convert Results to Excel",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build HTML Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Results to Excel": {
+      "main": [
+        [
+          {
+            "node": "Save Excel Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HTML Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Save HTML Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "eff69f3d-b02a-4b7b-9af8-50e272d24789",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

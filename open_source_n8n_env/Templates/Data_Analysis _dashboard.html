@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sample Sales Analysis Dashboard</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#667085;--line:#e5eaf1;--blue:#2563eb;}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px/1.5 Arial,sans-serif;color:var(--ink)}
+.wrap{max-width:1180px;margin:32px auto;padding:0 20px}h1{margin:0 0 5px;font-size:28px}.sub{color:var(--muted);margin-bottom:24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 3px 12px #1720330a}
+.kpi small{color:var(--muted);display:block}.kpi strong{font-size:27px;display:block;margin-top:6px}
+.section{margin-top:20px}.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px}h2{font-size:18px;margin:0 0 14px}
+.barrow{display:grid;grid-template-columns:90px 1fr 110px;gap:10px;align-items:center;margin:12px 0;font-size:13px}
+.track{height:13px;background:#edf1f7;border-radius:20px;overflow:hidden}.fill{height:100%;background:var(--blue);border-radius:20px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px;text-align:left;border-bottom:1px solid var(--line)}th{background:#f8fafc}
+@media(max-width:760px){.charts{grid-template-columns:1fr}.barrow{grid-template-columns:75px 1fr 90px}}
+</style></head><body><main class="wrap">
+<h1>Sales Analysis Dashboard</h1><div class="sub">Illustrative n8n pipeline output · Oracle + Excel + Python · October 2026 sample data</div>
+<section class="grid">
+<div class="card kpi"><small>Total Revenue</small><strong>₹514,900</strong></div>
+<div class="card kpi"><small>Total Orders</small><strong>10</strong></div>
+<div class="card kpi"><small>Units Sold</small><strong>29</strong></div>
+<div class="card kpi"><small>Average Order Value</small><strong>₹51,490</strong></div>
+<div class="card kpi"><small>Average Risk Score</small><strong>0.187</strong></div>
+</section>
+<section class="charts">
+<div class="card section"><h2>Revenue by Region</h2>
+<div class="barrow"><span>East</span><div class="track"><div class="fill" style="width:24.8%"></div></div><b>₹74,800</b></div><div class="barrow"><span>North</span><div class="track"><div class="fill" style="width:22.5%"></div></div><b>₹68,000</b></div><div class="barrow"><span>South</span><div class="track"><div class="fill" style="width:100.0%"></div></div><b>₹302,000</b></div><div class="barrow"><span>West</span><div class="track"><div class="fill" style="width:23.2%"></div></div><b>₹70,100</b></div>
+</div>
+<div class="card section"><h2>Revenue by Product</h2>
+<div class="barrow"><span>Headset</span><div class="track"><div class="fill" style="width:6.3%"></div></div><b>₹24,800</b></div><div class="barrow"><span>Keyboard</span><div class="track"><div class="fill" style="width:6.0%"></div></div><b>₹23,600</b></div><div class="barrow"><span>Laptop</span><div class="track"><div class="fill" style="width:100.0%"></div></div><b>₹393,000</b></div><div class="barrow"><span>Monitor</span><div class="track"><div class="fill" style="width:18.7%"></div></div><b>₹73,500</b></div>
+</div></section>
+<section class="card section"><h2>Combined Dataset Preview</h2><div style="overflow:auto"><table><thead><tr><th>Customer</th><th>Region</th><th>Product</th><th>Units</th><th>Revenue</th><th>Risk</th></tr></thead><tbody>
+<tr><td>Asha Rao</td><td>South</td><td>Laptop</td><td>2</td><td>₹130,000</td><td>0.12</td></tr><tr><td>Rahul Menon</td><td>West</td><td>Monitor</td><td>3</td><td>₹43,500</td><td>0.08</td></tr><tr><td>Divya Iyer</td><td>South</td><td>Keyboard</td><td>5</td><td>₹11,000</td><td>0.21</td></tr><tr><td>Arjun Das</td><td>North</td><td>Laptop</td><td>1</td><td>₹68,000</td><td>0.18</td></tr><tr><td>Neha Shah</td><td>West</td><td>Headset</td><td>4</td><td>₹14,000</td><td>0.06</td></tr><tr><td>Vikram Nair</td><td>South</td><td>Monitor</td><td>2</td><td>₹30,000</td><td>0.33</td></tr><tr><td>Sara Khan</td><td>East</td><td>Laptop</td><td>1</td><td>₹64,000</td><td>0.11</td></tr><tr><td>Rohan Patel</td><td>West</td><td>Keyboard</td><td>6</td><td>₹12,600</td><td>0.27</td></tr><tr><td>Meera Krishnan</td><td>East</td><td>Headset</td><td>3</td><td>₹10,800</td><td>0.09</td></tr><tr><td>Dev Kumar</td><td>South</td><td>Laptop</td><td>2</td><td>₹131,000</td><td>0.42</td></tr>
+</tbody></table></div></section>
+<p class="sub" style="margin-top:18px">Sample data only. Replace source queries and mappings with your Oracle schema and Excel columns before operational use.</p>
+</main></body></html>

@@ -1,0 +1,343 @@
+{
+  "name": "Local Mac AI & BI Data Pipeline - Starter",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "10000000-0000-4000-8000-000000000001",
+      "name": "Manual Run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fileSelector": "/files/input.xlsx",
+        "options": {}
+      },
+      "id": "10000000-0000-4000-8000-000000000002",
+      "name": "Read Excel File",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {}
+      },
+      "id": "10000000-0000-4000-8000-000000000003",
+      "name": "Extract Excel Rows",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        470,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM YOUR_SCHEMA.YOUR_TABLE FETCH FIRST 1000 ROWS ONLY",
+        "options": {}
+      },
+      "id": "10000000-0000-4000-8000-000000000004",
+      "name": "Read Oracle Dataset",
+      "type": "n8n-nodes-base.oracle",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "credentials": {
+        "oracleDatabase": {
+          "id": "REPLACE_WITH_ORACLE_CREDENTIAL_ID",
+          "name": "Local Oracle DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "python3 /opt/pipeline/generate_random_data.py"
+      },
+      "id": "10000000-0000-4000-8000-000000000005",
+      "name": "Generate Random Python Data",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        240,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.stdout ?? $json.data ?? '';\nlet rows;\ntry { rows = JSON.parse(raw); } catch (e) { throw new Error('Python generator must print a JSON array to stdout. Received: ' + String(raw).slice(0,300)); }\nif (!Array.isArray(rows)) throw new Error('Python generator output must be a JSON array.');\nreturn rows.map(row => ({ json: row }));"
+      },
+      "id": "10000000-0000-4000-8000-000000000006",
+      "name": "Parse Python Generated JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        470,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "id": "10000000-0000-4000-8000-000000000007",
+      "name": "Combine Excel + Oracle + Python",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        730,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Basic normalization: trim strings, convert empty strings to null, and remove exact duplicate rows.\nconst seen = new Set();\nconst output = [];\nfor (const item of $input.all()) {\n  const row = {};\n  for (const [key, value] of Object.entries(item.json ?? {})) {\n    row[key] = typeof value === 'string' ? (value.trim() === '' ? null : value.trim()) : value;\n  }\n  const key = JSON.stringify(row);\n  if (!seen.has(key)) { seen.add(key); output.push({json: row}); }\n}\nreturn output;"
+      },
+      "id": "10000000-0000-4000-8000-000000000008",
+      "name": "Clean Dataset",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        970,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lightweight EDA summary from incoming records.\nconst rows = $input.all().map(x => x.json);\nconst columns = [...new Set(rows.flatMap(r => Object.keys(r)))];\nconst summary = { rowCount: rows.length, columns, fields: {} };\nfor (const col of columns) {\n  const vals = rows.map(r => r[col]).filter(v => v !== null && v !== undefined && v !== '');\n  const nums = vals.map(Number).filter(Number.isFinite);\n  summary.fields[col] = { nonNullCount: vals.length, nullCount: rows.length - vals.length, distinctCount: new Set(vals.map(String)).size };\n  if (nums.length) summary.fields[col].numeric = { min: Math.min(...nums), max: Math.max(...nums), mean: nums.reduce((a,b)=>a+b,0)/nums.length };\n}\nreturn [{json: {dataset: rows, exploration: summary}}];"
+      },
+      "id": "10000000-0000-4000-8000-000000000009",
+      "name": "Basic Dataset Exploration",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1210,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: 'qwen3:14b', stream: false, messages: [{ role: 'system', content: 'You are a careful data analyst. Describe patterns and caveats; do not invent facts.' }, { role: 'user', content: 'Analyze this dataset exploration summary and suggest useful BI questions. Return concise JSON. Summary: ' + JSON.stringify($json.exploration) }] } }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "10000000-0000-4000-8000-000000000010",
+      "name": "Ask Local Ollama Qwen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "python3 /opt/pipeline/identify_patterns.py"
+      },
+      "id": "10000000-0000-4000-8000-000000000011",
+      "name": "Identify Patterns (Python)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        1690,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/database/1/query",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { query: 'SELECT 1 AS pipeline_template_check' } }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "10000000-0000-4000-8000-000000000012",
+      "name": "Metabase API Placeholder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1930,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "content": "SETUP REQUIRED BEFORE RUNNING\\n1) Mount a shared folder into the n8n container at /files and place input.xlsx there.\\n2) Mount your Python scripts folder at /opt/pipeline. generate_random_data.py must print a JSON array to stdout. identify_patterns.py should read the cleaned dataset from your shared storage or be adapted to accept your chosen input/output contract.\\n3) Configure the Oracle credential and replace YOUR_SCHEMA.YOUR_TABLE. Oracle host in the diagram: orb.local:1521 (verify service name/network).\\n4) Ensure Ollama is running on the Mac host at port 11434 and has qwen3:14b pulled. For containers, host.docker.internal should resolve.\\n5) The Metabase node is only a placeholder API call; configure authentication, database ID, and a real SQL query before enabling.\\n6) The diagram mentions Qwen3-VL:8b, scikit-learn IsolationForest, Oracle OML4SQL, Wren AI, Slack alerts, and PNG charts. Those are not fully wired here because their schemas, credentials, SQL, and output destinations are project-specific. Add/configure them after validating the base flow.",
+        "height": 360,
+        "width": 520,
+        "color": 5
+      },
+      "id": "10000000-0000-4000-8000-000000000013",
+      "name": "Read Me - Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -360
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Run": {
+      "main": [
+        [
+          {
+            "node": "Read Excel File",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Read Oracle Dataset",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Random Python Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Excel File": {
+      "main": [
+        [
+          {
+            "node": "Extract Excel Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Excel Rows": {
+      "main": [
+        [
+          {
+            "node": "Combine Excel + Oracle + Python",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Oracle Dataset": {
+      "main": [
+        [
+          {
+            "node": "Combine Excel + Oracle + Python",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Generate Random Python Data": {
+      "main": [
+        [
+          {
+            "node": "Parse Python Generated JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Python Generated JSON": {
+      "main": [
+        [
+          {
+            "node": "Combine Excel + Oracle + Python",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Combine Excel + Oracle + Python": {
+      "main": [
+        [
+          {
+            "node": "Clean Dataset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Dataset": {
+      "main": [
+        [
+          {
+            "node": "Basic Dataset Exploration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic Dataset Exploration": {
+      "main": [
+        [
+          {
+            "node": "Ask Local Ollama Qwen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Local Ollama Qwen": {
+      "main": [
+        [
+          {
+            "node": "Identify Patterns (Python)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identify Patterns (Python)": {
+      "main": [
+        [
+          {
+            "node": "Metabase API Placeholder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b5121f1f-eda3-4170-ba27-5c2d45bfc3ac",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

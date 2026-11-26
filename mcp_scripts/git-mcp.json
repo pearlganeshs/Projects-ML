@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "git": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--mount",
+        "type=bind,src=/Users/muthsubr/d/Learnings/DS_ML/Projects/Projects-ML,dst=/workspace",
+        "mcp/git:latest",
+        "--repository",
+        "/workspace"
+      ]
+    }
+  }
+}
